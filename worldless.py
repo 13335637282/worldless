@@ -1,3 +1,4 @@
+import json
 import tkinter as tk
 from tkinter import messagebox, ttk, simpledialog
 import urllib.request
@@ -7,12 +8,150 @@ import random
 import re
 import csv
 import threading
-import time
 import queue
+
+CONFIG_FILE = "wordle_config.json"
+GITHUB_URL = "https://github.com/13335637282/worldless"
+
+
+def check_disclaimer_agreement():
+    """检查用户是否已同意免责声明"""
+    try:
+        if os.path.exists(CONFIG_FILE):
+            with open(CONFIG_FILE, "r") as f:
+                config = json.load(f)
+                return config.get("agreed_to_disclaimer", False)
+    except:
+        pass
+    return False
+
+
+def save_disclaimer_agreement():
+    """保存用户同意免责声明的状态"""
+    try:
+        config = {"agreed_to_disclaimer": True}
+        with open(CONFIG_FILE, "w") as f:
+            json.dump(config, f)
+    except Exception as e:
+        print(f"保存配置失败: {e}")
+
+def show_disclaimer() -> None:
+    """显示免责声明对话框"""
+    disclaimer_text = f"""
+       Wordle 单词游戏 - 免责声明
+
+       本软件根据 GNU General Public License v3.0 (GPL-3.0) 开源协议发布。
+       完整协议内容请访问: https://www.gnu.org/licenses/gpl-3.0.html
+
+       源代码仓库: {GITHUB_URL}
+
+       免责条款:
+       1. 本软件按"原样"提供，不提供任何形式的明示或暗示担保
+       2. 作者不对因使用本软件而导致的任何损害或损失负责
+       3. 用户使用本软件的风险完全由用户自行承担
+       4. 本软件不会收集、存储或传输任何用户数据
+
+       隐私声明:
+       - 本软件不会收集任何用户个人信息
+       - 所有数据处理均在本地设备上进行
+       - 不会上传任何数据到远程服务器
+
+       使用本软件即表示您已阅读、理解并同意上述条款。
+       """
+
+    # 创建免责声明窗口
+    disclaimer_window = tk.Tk()
+    disclaimer_window.title("免责声明")
+    disclaimer_window.geometry("500x750")
+    disclaimer_window.grab_set()
+
+    # 创建文本区域
+    text_frame = tk.Frame(disclaimer_window, padx=10, pady=10)
+    text_frame.pack(fill=tk.BOTH, expand=True)
+
+    text_area = tk.Text(
+        text_frame,
+        wrap=tk.WORD,
+        font=("Microsoft YaHei", 11),
+        padx=10,
+        pady=10
+    )
+    text_area.pack(fill=tk.BOTH, expand=True)
+    text_area.insert(tk.END, disclaimer_text)
+    text_area.config(state=tk.DISABLED)
+
+    # 创建按钮框架
+    button_frame = tk.Frame(disclaimer_window, padx=10, pady=10)
+    button_frame.pack(fill=tk.X)
+
+    def agree():
+        save_disclaimer_agreement()
+        disclaimer_window.destroy()
+
+    def disagree():
+        exit(0x111)
+
+    # 添加按钮
+    agree_btn = tk.Button(
+        button_frame,
+        text="同意并继续",
+        command=agree,
+        font=("Microsoft YaHei", 12),
+        width=15,
+        bg="#6AAA64",
+        fg="white"
+    )
+    agree_btn.pack(side=tk.RIGHT, padx=10)
+
+    disagree_btn = tk.Button(
+        button_frame,
+        text="不同意并退出",
+        command=disagree,
+        font=("Microsoft YaHei", 12),
+        width=15,
+        bg="#787C7E",
+        fg="white"
+    )
+    disagree_btn.pack(side=tk.RIGHT, padx=10)
+    disclaimer_window.mainloop()
 
 
 class WordleGame:
-    def __init__(self, root):
+
+
+
+
+    def  __init__(self, root):
+
+        if not check_disclaimer_agreement():
+            x=tk.messagebox.askokcancel("免责声明",f"""
+       Wordle 单词游戏 - 免责声明
+
+       本软件根据 GNU General Public License v3.0 (GPL-3.0) 开源协议发布。
+       完整协议内容请访问: https://www.gnu.org/licenses/gpl-3.0.html
+
+       源代码仓库: {GITHUB_URL}
+
+       免责条款:
+       1. 本软件按"原样"提供，不提供任何形式的明示或暗示担保
+       2. 作者不对因使用本软件而导致的任何损害或损失负责
+       3. 用户使用本软件的风险完全由用户自行承担
+       4. 本软件不会收集、存储或传输任何用户数据
+
+       隐私声明:
+       - 本软件不会收集任何用户个人信息
+       - 所有数据处理均在本地设备上进行
+       - 不会上传任何数据到远程服务器
+
+       使用本软件即表示您已阅读、理解并同意上述条款。
+       点击确定表示 您已阅读、理解并同意上述条款。点击取消表示 您不同意上述条款，并不使用此程序
+       """)
+            if not x:
+                exit(0x100)
+            else:
+                tk.messagebox.showinfo("worldless","欢迎!")
+                save_disclaimer_agreement()
+
         self.root = root
         self.root.title("Wordle 单词游戏")
         self.root.geometry("500x700")
@@ -58,7 +197,8 @@ class WordleGame:
 
         # 定期检查消息队列
         self.root.after(100, self.process_queue)
-
+        
+   
     def process_queue(self):
         """处理线程发送到主线程的消息"""
         try:
@@ -77,6 +217,7 @@ class WordleGame:
                 elif msg == "DICT_LOADED":
                     self.dictionary_loaded = True
                     self.status_var.set(f"词库加载完成: {len(self.dictionary)} 个单词")
+                    tk.messagebox.showinfo("加载完成",f"词库加载完成: {len(self.dictionary)} 个单词")
                     self.root.after(100, self.start_new_game)
         except queue.Empty:
             pass
@@ -274,7 +415,7 @@ class WordleGame:
     def show_loading_window(self):
         self.loading_window = tk.Toplevel(self.root)
         self.loading_window.title("加载词库")
-        self.loading_window.geometry("300x200")
+        self.loading_window.geometry("400x300")
         self.loading_window.transient(self.root)
         self.loading_window.grab_set()
         self.loading_window.resizable(False, False)
@@ -822,7 +963,7 @@ def main():
         icon = tk.PhotoImage(data=img.tobytes())
         root.iconphoto(True, icon)
     except:
-        pass
+        print("ICON Create ERROR")
 
     game = WordleGame(root)
     root.mainloop()
