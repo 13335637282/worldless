@@ -10,7 +10,7 @@ import csv
 import threading
 import queue
 
-CONFIG_FILE = "wordle_config.json"
+CONFIG_FILE = "Wordle_config.json"
 GITHUB_URL = "https://github.com/13335637282/worldless"
 
 
@@ -60,13 +60,13 @@ def show_disclaimer() -> None:
        """
 
     # 创建免责声明窗口
-    disclaimer_window = tk.Tk()
+    disclaimer_window:tk.Tk = tk.Tk()
     disclaimer_window.title("免责声明")
     disclaimer_window.geometry("500x750")
     disclaimer_window.grab_set()
 
     # 创建文本区域
-    text_frame = tk.Frame(disclaimer_window, padx=10, pady=10)
+    text_frame:tk.Frame = tk.Frame(disclaimer_window, padx=10, pady=10)
     text_frame.pack(fill=tk.BOTH, expand=True)
 
     text_area = tk.Text(
@@ -123,6 +123,7 @@ class WordleGame:
 
     def  __init__(self, root):
 
+        self.end:bool = False
         if not check_disclaimer_agreement():
             x=tk.messagebox.askokcancel("免责声明",f"""
        Wordle 单词游戏 - 免责声明
@@ -152,33 +153,34 @@ class WordleGame:
                 tk.messagebox.showinfo("worldless","欢迎!")
                 save_disclaimer_agreement()
 
-        self.root = root
-        self.root.title("Wordle 单词游戏")
+        self.root:tk.Tk = root
+        self.root.title("Wordle 单词游戏 - 随机模式")
         self.root.geometry("500x700")
         self.root.configure(bg="#121213")
 
         # 常量
-        self.DICT_URL = "https://gitee.com/yuxiqin/100000-english-words/raw/master/EnWords.csv"
-        self.LOCAL_DICT = "EnWords.csv"
-        self.SEPARATOR = "::"
+        self.DICT_URL:str = "https://gitee.com/yuxiqin/100000-english-words/raw/master/EnWords.csv"
+        self.LOCAL_DICT:str = "EnWords.csv"
+        self.SEPARATOR:str = "::"
 
         # 游戏状态
-        self.dictionary = []
-        self.word_meanings = {}
-        self.target_word = ""
-        self.word_length = 5
-        self.max_attempts = 6
-        self.current_attempt = 0
-        self.dictionary_loaded = False  # 标记词库是否已加载
+        self.dictionary:list = []
+        self.word_meanings:dict = {}
+        self.target_word:str = ""
+        self.word_length:int = 5
+        self.max_attempts:int = 6
+        self.current_attempt:int = 0
+        self.dictionary_loaded:bool = False  # 标记词库是否已加载
+        self.won:bool = False
 
         # 颜色定义
-        self.CORRECT_COLOR = "#6AAA64"  # 绿色
-        self.PRESENT_COLOR = "#C9B458"  # 黄色
-        self.ABSENT_COLOR = "#787C7E"  # 灰色
-        self.DEFAULT_BG = "#121213"  # 背景色
-        self.DEFAULT_BORDER = "#3A3A3C"  # 边框色
-        self.KEY_DEFAULT = "#818384"  # 键盘默认颜色
-        self.TEXT_COLOR = "#D7DADC"  # 文字颜色
+        self.CORRECT_COLOR:str = "#6AAA64"  # 绿色
+        self.PRESENT_COLOR:str = "#C9B458"  # 黄色
+        self.ABSENT_COLOR:str = "#787C7E"  # 灰色
+        self.DEFAULT_BG:str = "#121213"  # 背景色
+        self.DEFAULT_BORDER:str = "#3A3A3C"  # 边框色
+        self.KEY_DEFAULT:str = "#818384"  # 键盘默认颜色
+        self.TEXT_COLOR:str = "#D7DADC"  # 文字颜色
 
         # 创建UI
         self.create_menu()
@@ -677,7 +679,7 @@ class WordleGame:
                     elif label_color == self.PRESENT_COLOR and char_color != self.CORRECT_COLOR:
                         char_color = self.PRESENT_COLOR
                     elif label_color == self.ABSENT_COLOR and char_color != self.CORRECT_COLOR and char_color != self.PRESENT_COLOR:
-                        char_color = self.ABSENT_COLOR
+                        char_color = "#cd382c"
 
             # 更新键盘按钮颜色
             if char_color and char_color != self.key_colors[char]:
@@ -691,8 +693,7 @@ class WordleGame:
         else:
             self.status_var.set(f"恭喜你猜对了！单词: {self.target_word.upper()}")
 
-        # 禁用输入
-        self.root.unbind("<Key>")
+        self.end = True
 
         # 显示胜利动画
         self.show_victory_animation()
@@ -725,8 +726,8 @@ class WordleGame:
         else:
             self.status_var.set(f"游戏结束！正确答案: {self.target_word.upper()}")
 
-        # 禁用输入
-        self.root.unbind("<Key>")
+
+        self.end = True
 
         # 高亮显示正确答案
         self.highlight_solution()
@@ -781,9 +782,13 @@ class WordleGame:
                     self.max_attempts = new_attempts
                     settings_dialog.destroy()
                     self.start_new_game()
-                    self.root.bind("<Key>", self.handle_key_press)
+                    self.end = False
+                    self.root.title("Wordle - 随机模式")
                 else:
                     messagebox.showerror("错误", "请输入有效的设置值")
+                    
+
+
             except ValueError:
                 messagebox.showerror("错误", "请输入有效的数字")
 
@@ -832,9 +837,10 @@ class WordleGame:
             self.current_attempt = 0
 
             # 重置UI并开始新游戏
+            self.end = False
             self.reset_ui()
             self.status_var.set(f"游戏已导入: {self.word_length} 个字母, {self.max_attempts} 次尝试机会")
-            self.root.bind("<Key>", self.handle_key_press)
+            self.root.title("Wordle - 导入模式")
 
         except Exception as e:
             messagebox.showerror("错误", f"导入游戏失败: {str(e)}")
@@ -942,13 +948,17 @@ class WordleGame:
     def handle_key_press(self, event):
         # 处理键盘事件
         char = event.char.lower()
-
-        if event.keysym == "BackSpace":
-            self.remove_letter()
-        elif event.keysym == "Return":
-            self.submit_guess()
-        elif "a" <= char <= "z":
-            self.add_letter(char)
+        if not self.end:
+            if event.keysym == "BackSpace":
+                self.remove_letter()
+            elif event.keysym == "Return":
+                self.submit_guess()
+            elif "a" <= char <= "z":
+                self.add_letter(char)
+        else:
+            if event.keysym == "Return":
+                self.end=False
+                self.start_new_game()
 
 
 def main():
@@ -964,6 +974,7 @@ def main():
         root.iconphoto(True, icon)
     except:
         print("ICON Create ERROR")
+
 
     game = WordleGame(root)
     root.mainloop()
